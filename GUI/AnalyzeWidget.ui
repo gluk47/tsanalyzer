@@ -1,21 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <author/>
- <comment/>
- <exportmacro/>
  <class>AnalyzeWidget</class>
  <widget class="QWidget" name="AnalyzeWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>505</width>
+    <height>367</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Папка с рядами:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="setPath">
+       <property name="text">
+        <string>../set</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="browseSetPath">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Компрессор (LZMA): </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lzmaPath">
+       <property name="text">
+        <string>../lzma</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="browseLzmaPath">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="go">
+     <property name="text">
+      <string>Рассчитать координаты и корреляции</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="text">
+      <string>Ready</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="correlations">
+     <property name="sizeAdjustPolicy">
+      <enum>QAbstractScrollArea::AdjustToContents</enum>
+     </property>
+     <row>
+      <property name="text">
+       <string>Гармоническая
+сложность</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Гармоническая
+сложность
+тенденций</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Колмогоровская
+сложность</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Колмогоровская
+сложность
+тенденций</string>
+      </property>
+     </row>
+     <column>
+      <property name="text">
+       <string>Гармоническая
+сложность</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Гармоническая
+сложность
+тенденций</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Колмогоровская
+сложность</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Колмогоровская
+сложность
+тенденций</string>
+      </property>
+     </column>
+     <item row="0" column="0">
+      <property name="text">
+       <string>1</string>
+      </property>
+     </item>
+     <item row="1" column="1">
+      <property name="text">
+       <string>1</string>
+      </property>
+     </item>
+     <item row="2" column="2">
+      <property name="text">
+       <string>1</string>
+      </property>
+     </item>
+     <item row="3" column="3">
+      <property name="text">
+       <string>1</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>24</number>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
- <pixmapfunction/>
+ <resources/>
  <connections/>
 </ui>
