@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>623</width>
-    <height>380</height>
+    <width>499</width>
+    <height>479</height>
    </rect>
   </property>
   <property name="font">
@@ -82,7 +82,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Сэмплируемая функция: a sin(α x) + b x + c eᵞˣ + d ln (δ x) + ε, где</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Сэмплируемая функция:&lt;/p&gt;&lt;p&gt;a sin(2πα x) + b x + c exp(2/e γx) + d ln (δ e(x+1)) + ε,&lt;/p&gt;&lt;p&gt;где x ∈ [0; 1],&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>

@@ -28,6 +28,9 @@ Plot::Plot(QWidget *parent) :
         ui->axisY->addItem(coordinates_t::coordinateName(i));
     }
 
+    ui->plotWidget->setInteraction(QCP::iRangeDrag, true);
+    ui->plotWidget->setInteraction(QCP::iRangeZoom, true);
+
     validatePath();
 }
 
@@ -120,11 +123,13 @@ void Plot::refreshPlot() {
             QApplication::processEvents();
     }
 
-    ui->plotWidget->graph(0)->setData(x, y);
-    qDebug () << "Ranges:" << xmin << ".." << xmax << "×"
+    ui->plotWidget->graph(0)->setData(y, x);
+    qDebug () << "Range:" << xmin << ".." << xmax << "×"
               << ymin << ".." << ymax;
+
     ui->plotWidget->xAxis->setRange(xmin, xmax);
     ui->plotWidget->yAxis->setRange(ymin, ymax);
+    ui->plotWidget->replot();
 }
 
 void Plot::enableControls(bool _) {
@@ -133,4 +138,24 @@ void Plot::enableControls(bool _) {
     ui->axisY->setEnabled(_);
     ui->setPath->setEnabled(_);
     ui->browseSetPath->setEnabled(_);
+}
+
+void Plot::on_savePlot_clicked() {
+    auto fname = QFileDialog::getSaveFileName(this,
+                                              tr("Укажите папку с выборкой рядов"),
+                                              ui->setPath->text(),
+                                              tr("PDF (*.pdf);;"
+                                                 "Png image (*.png);;"
+                                                 "Jpeg image(*.jpg)"));
+    if (fname.isNull())
+        return;
+
+    QFileInfo file (fname);
+
+    if (file.suffix().toLower() == "pdf")
+        ui->plotWidget->savePdf(fname);
+    else if (file.suffix().toLower() == "png")
+        ui->plotWidget->savePng(fname);
+    else if (file.suffix().toLower() == "jpg")
+        ui->plotWidget->saveJpg(fname);
 }

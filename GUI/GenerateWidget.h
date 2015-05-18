@@ -41,7 +41,6 @@ private:
 
     Ui::GenerateWidget *ui;
     unsigned setSize;
-    bool setSizeCounted = 0;
     QVector <CoefftWidget*> kWidgets;
 };
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>505</width>
-    <height>367</height>
+    <width>808</width>
+    <height>577</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -86,78 +86,6 @@
      <property name="sizeAdjustPolicy">
       <enum>QAbstractScrollArea::AdjustToContents</enum>
      </property>
-     <row>
-      <property name="text">
-       <string>Гармоническая
-сложность</string>
-      </property>
-     </row>
-     <row>
-      <property name="text">
-       <string>Гармоническая
-сложность
-тенденций</string>
-      </property>
-     </row>
-     <row>
-      <property name="text">
-       <string>Колмогоровская
-сложность</string>
-      </property>
-     </row>
-     <row>
-      <property name="text">
-       <string>Колмогоровская
-сложность
-тенденций</string>
-      </property>
-     </row>
-     <column>
-      <property name="text">
-       <string>Гармоническая
-сложность</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Гармоническая
-сложность
-тенденций</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Колмогоровская
-сложность</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Колмогоровская
-сложность
-тенденций</string>
-      </property>
-     </column>
-     <item row="0" column="0">
-      <property name="text">
-       <string>1</string>
-      </property>
-     </item>
-     <item row="1" column="1">
-      <property name="text">
-       <string>1</string>
-      </property>
-     </item>
-     <item row="2" column="2">
-      <property name="text">
-       <string>1</string>
-      </property>
-     </item>
-     <item row="3" column="3">
-      <property name="text">
-       <string>1</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item>
@@ -170,5 +98,22 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>setPath</sender>
+   <signal>returnPressed()</signal>
+   <receiver>go</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>269</x>
+     <y>31</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>282</x>
+     <y>86</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

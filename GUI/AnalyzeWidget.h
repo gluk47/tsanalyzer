@@ -29,11 +29,14 @@ private slots:
     void on_setPath_textChanged(const QString &arg1);
     void on_lzmaPath_textChanged(const QString &arg1);
 
+    void on_AnalyzeWidget_destroyed();
+
 private:
     /// Get the directory with the result of the program
     QString destPath ();
     QLabel* correlations_label = nullptr;
     Ui::AnalyzeWidget *ui;
+    bool stop = false;
 };
 
 #endif // ANALYZEWIDGET_H

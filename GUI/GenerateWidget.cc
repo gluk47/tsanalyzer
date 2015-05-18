@@ -11,6 +11,7 @@
 #include <iostream>
 #include <random>
 
+#include "helpers.h"
 #include "CoefftWidget.h"
 
 using std::cerr;
@@ -102,6 +103,8 @@ GenerateWidget::GenerateWidget(QWidget *parent) :
     ADD(γ);
     ADD(d);
     ADD(δ);
+    w->setMin(1e-2);
+    w->setMax(3);
 
 #undef ADD
 
@@ -123,12 +126,16 @@ void GenerateWidget::generate() {
     const unsigned npoints = 1500;
     QDir setPath (ui->setPath->text());
 
-    if (not setSizeCounted)
-        countSetSize();
+    countSetSize();
 
     ui->progressBar->setMaximum(setSize);
     ui->progressBar->setValue(0);
     ui->progressBar->show();
+
+    scope_exit restore_ui ([this]{
+        ui->progressBar->hide();
+    });
+
     ui->generate->setEnabled(false);
     QApplication::processEvents();
     const double errmean = ui->errMean->value(),
@@ -138,6 +145,10 @@ void GenerateWidget::generate() {
 
     setSize = 0;
     forAllCoefficients([this, errmean, errdisp, setPath, &id](const QVector <double>& k){
+                if (setSize > 3000) {
+                    std::cerr << "aborting generation, setSize exceeds 3000\n";
+                    return;
+                }
                 const QString fname =
                         setPath.absoluteFilePath("ts_" + QString::number(id++));
                 generate_series(
@@ -157,19 +168,18 @@ void GenerateWidget::generate() {
 
                ui->progressBar->setValue(id);
                ++setSize;
-               QApplication::processEvents();
+               if (setSize % 10 == 0)
+                   QApplication::processEvents();
     });
     generate_series([](float){return get_error(0., .8);}, npoints,
                     setPath.absoluteFilePath( "ts_const"));
 
-    ui->progressBar->hide();
     ui->labelReady->show();
     ui->labelSetSize->show();
     ui->labelCount->setText(spaceNumber(setSize));
     ui->labelCount->show();
     ui->labelSeries->setText(plural("ряд", "", "а", "ов", setSize));
 
-    ui->progressBar->hide();
     ui->generate->setEnabled(true);
 }
 
@@ -179,12 +189,10 @@ void GenerateWidget::countSetSize() {
     for (int i = 0; i < kWidgets.size(); ++i) {
         auto range = kWidgets[i]->getInfo();
         unsigned s = (range.max - range.min) / range.step;
-        s -= static_cast <bool> (range.min + range.step * s > range.max);
+        s += static_cast <bool> (range.min + range.step * s < range.max);
         setSize *= s;
         QApplication::processEvents();
     }
-//    forAllCoefficients([this](const QVector <double>&){ ++setSize; });
-    setSizeCounted = true;
     ui->labelCount->setText(spaceNumber(setSize));
     ui->labelCount->show();
     ui->labelSetSize->show();
@@ -193,13 +201,23 @@ void GenerateWidget::countSetSize() {
     ui->countSetSize->setEnabled(true);
 }
 
+template <class T>
+std::ostream& operator<< (std::ostream& str, const QVector<T>& data) {
+    for (auto _ : data)
+        str << _ << " ";
+    return str;
+}
+
 void GenerateWidget::iterateK (QVector <double>& k,
                                std::function <void (const QVector <double>&)>& f,
                                unsigned index) {
+//    std::cerr << "Iterating with k = " << k << "... ";
     if (index >= static_cast <unsigned> (k.size())) {
+//        std::cerr << "recursion end\n";
         f (k);
         return;
     }
+
     auto range = kWidgets [index]->getInfo();
     for (k [index] = range.min; k [index] < range.max; k [index] += range.step)
         iterateK(k, f, index + 1);

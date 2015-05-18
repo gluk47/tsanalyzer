@@ -9,14 +9,18 @@ class QString;
 #include <QObject>
 
 struct coordinates_t {
-    static constexpr size_t nValues = 4;
+    static constexpr size_t nValues = 8;
     union {
         double values [nValues];
         struct {
             double harmonicComplexity,
                    tendencyHarmonicComplexity,
                    KolmogorovComplexity,
-                   tendencyKolmogorovComplexity;
+                   tendencyKolmogorovComplexity,
+                   fractalDimensionality,
+                   tendencyFractalDimensionality,
+                   characterVariability,
+                   tendencycharacterVariability;
         } by_name;
     };
     /// User-readable coordinate name (in Russian)

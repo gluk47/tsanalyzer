@@ -48,6 +48,12 @@ public:
      */
     float harmonicComplexity () const;
 
+    float herstValue () const;
+
+    float fractalDimensionality () const { return 2 - herstValue(); }
+    /// Мера символьного разнообразия
+    double charDifDim () const;
+
     int size() const { return _Values.size(); }
 private:
     /// How many intervals are there in the values domain

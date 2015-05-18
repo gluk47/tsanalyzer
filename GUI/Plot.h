@@ -22,6 +22,8 @@ private slots:
     void refreshPlot();
     void enableControls (bool);
 
+    void on_savePlot_clicked();
+
 private:
     Ui::Plot *ui;
     QwtPlot* plot;

@@ -7,8 +7,7 @@ namespace Ui {
 class CoefftWidget;
 }
 
-class CoefftWidget : public QWidget
-{
+class CoefftWidget : public QWidget {
     Q_OBJECT
 
 public:
@@ -19,6 +18,11 @@ public:
         double min, max, step;
     };
     info getInfo ();
+
+public slots:
+    void setMin(double);
+    void setMax(double);
+    void setStep(double);
 
 private:
     Ui::CoefftWidget *ui;

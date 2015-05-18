@@ -5,6 +5,7 @@
 #include <QDebug>
 
 #include <cmath>
+#include <limits>
 
 constexpr double M_2PI = 2 * M_PI;
 
@@ -116,6 +117,31 @@ float TimeSeries::harmonicComplexity() const {
     return complexity;
 }
 
+float TimeSeries::herstValue() const {
+    if (size() < 2) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    double MX = std::accumulate (_Values.begin(), _Values.end(), 0.,
+                                 [](double sum, double v){ return sum + v; }) / size();
+
+    float vmin = _Values [0], vmax = vmin;
+    double S = 0;
+    for (int i = 0; i < size(); ++i) {
+        auto v = _Values[i];
+        S += std::pow (v - MX, 2);
+        vmax = std::max (v, vmax);
+        vmin = std::min (v, vmin);
+    }
+    S = sqrt (S / (size() - 1));
+
+    double R = vmax - vmin;
+
+    auto ans = log (R / S)
+               / log(size());
+    return ans;
+}
+
 void TimeSeries::_Encode() const {
     _Encoded.clear();
     dirty = false;
@@ -130,4 +156,66 @@ void TimeSeries::_Encode() const {
             --code;
         _Encoded.append(code);
     }
+}
+
+double TimeSeries::charDifDim() const {
+    const int n = _Values.size();
+    auto coded = encoded();
+    double dtV_m;
+    int m;
+
+    const QVector <double> abc = [this]{
+        QVector <double> ans;
+        for (unsigned k = 0; k < nLevels(); ++k)
+            ans.append(k); // k-мощность алфавита, элементы алфавита - целые от 0 до k-1
+        return ans;
+    }();
+
+    QVector <double> Cm(n, 0), dC(n, 0);
+    QVector <double> ci (nLevels(), 0); //вектор частотной встречаемости слов
+    QVector <QVector <double>> wi_m; //вектор многообразия слов длины m
+
+    wi_m.append(abc);
+    for (int j1 = 0; j1 < n; ++j1) {
+        for (unsigned j = 0; j < nLevels(); ++j) {
+            if (coded[j1] == abc[j]) {
+                ++ci[j];
+                break;
+            }
+        }
+    }
+
+    for (unsigned j = 0; j < nLevels(); ++j) {
+        if (ci[j])
+            Cm[0]+=((ci[j]/n)*(log(n/ci[j])) / log(nLevels()));
+    }
+
+    for (m = 1; m < n; ++m) {
+        int j = pow (nLevels(), m); //число возможных слов длины m над алфавитом abc
+        wi_m.append(QVector <double>());
+        for (unsigned j1 = 0; j1 < nLevels(); ++j1) {
+            int j0 = wi_m[m-1].size(); //число различных слов длины m-1
+            for (int j2 = 0; j2 < j0; ++j2)
+                wi_m[m].append(abc[j1] * pow(10,m) + wi_m[m-1][j2]);
+        }
+        ci.fill(0,j);
+        for (int j1=0; j1<(n-m); ++j1) {//цикл по словам временного ряда
+            dtV_m=0;
+            for (int j2=0; j2<m+1; ++j2)
+                dtV_m+= (coded[j1+j2] * pow(10,m-j2));
+            for (int j0 = 0; j0 < j; ++j0) //пробег по всем словам длины m над алфавитом abc
+                if (dtV_m == wi_m[m][j0]) {
+                    ++ci[j0];
+                    break;
+                }
+        }
+        for (int j0 = 0; j0 < j; ++j0) {
+            if (ci[j0])
+                Cm[m]+=((ci[j0]/(n-m))*(log((n-m)/ci[j0])) / log(j));
+        }
+        dC[m]=Cm[m-1]-Cm[m];
+        if (dC[m] < dC[m-1])
+            break;
+    }
+    return (m / floor(log(n)/log(nLevels())));
 }

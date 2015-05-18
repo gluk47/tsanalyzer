@@ -40,11 +40,42 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="refreshPlot">
-     <property name="text">
-      <string>Обновить график</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QToolButton" name="refreshPlot">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Обновить график</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="savePlot">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Сохранить график в файл…</string>
+       </property>
+       <property name="icon">
+        <iconset theme="document-save-as">
+         <normaloff/>
+        </iconset>
+       </property>
+       <property name="toolButtonStyle">
+        <enum>Qt::ToolButtonTextBesideIcon</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QProgressBar" name="progressBar">

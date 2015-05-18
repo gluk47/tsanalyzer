@@ -19,3 +19,15 @@ CoefftWidget::info CoefftWidget::getInfo() {
         ui->valuesStep->value()
     };
 }
+
+void CoefftWidget::setMin(double v) {
+    ui->valueMin->setValue(v);
+}
+
+void CoefftWidget::setMax(double v) {
+    ui->valueMax->setValue(v);
+}
+
+void CoefftWidget::setStep(double v) {
+    ui->valuesStep->setValue(v);
+}
