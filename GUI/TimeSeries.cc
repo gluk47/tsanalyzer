@@ -122,24 +122,29 @@ float TimeSeries::herstValue() const {
         return std::numeric_limits<double>::quiet_NaN();
     }
 
-    double MX = std::accumulate (_Values.begin(), _Values.end(), 0.,
-                                 [](double sum, double v){ return sum + v; }) / size();
+    double R=0, S=0;
+    const int n=_Values.size();
+    double EX=0, MX=0; //среднее значение временного ряда
+    double W[n]; //вектор отклонений
+    double Wmax=0, Wmin=0;
 
-    float vmin = _Values [0], vmax = vmin;
-    double S = 0;
-    for (int i = 0; i < size(); ++i) {
-        auto v = _Values[i];
-        S += std::pow (v - MX, 2);
-        vmax = std::max (v, vmax);
-        vmin = std::min (v, vmin);
+    int i;
+    for (i=0; i<n; i++) EX+=_Values[i]; MX=EX/n;
+
+    EX=0;
+    for (i=0; i<n; i++) { EX+=_Values[i]; W[i]=EX - (i+1)*MX; }
+
+    for (i=0; i<n; i++)
+    {
+         if (Wmax<W[i]) Wmax=W[i];
+         if (Wmin>W[i]) Wmin=W[i];
     }
-    S = sqrt (S / (size() - 1));
+    R=Wmax-Wmin;
 
-    double R = vmax - vmin;
+    for (i=0; i<n; i++) { S+= pow((_Values[i]-MX), 2); }
+    S=sqrt(S/n);
 
-    auto ans = log (R / S)
-               / log(size());
-    return ans;
+    return log(R/S)/log(n);
 }
 
 void TimeSeries::_Encode() const {

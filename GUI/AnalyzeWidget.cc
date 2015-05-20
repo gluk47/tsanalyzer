@@ -202,6 +202,15 @@ void AnalyzeWidget::FindCorrelations() {
     }
 
     for (size_t i = 0; i < coordinates_t::nValues; ++i) {
+        if (D[i] == 0) {
+            qDebug () << "Дисперия координаты"
+                      << coordinates_t::coordinateName(i)
+                      << "равна нулю! Исправьте выборку.";
+        } else if (std::isnan(D[i])) {
+            qDebug () << "Дисперия координаты"
+                      << coordinates_t::coordinateName(i)
+                      << "— nan! Исправьте программу или выборку.";
+        }
 //        QTableWidgetItem* item = ui->correlations->item(i, i);
 //        if (item == nullptr) {
 //            item = new QTableWidgetItem ("1");
@@ -212,8 +221,6 @@ void AnalyzeWidget::FindCorrelations() {
                                                 [i, j, E](double s, const coordinates_t& v)
                                                 { return s + (v.values[i] - E[i]) * (v.values[j] - E[j]); });
             double denominator = sqrt(D[i] * D[j]);
-            qDebug () << "Correlation denominator for" << coordinates_t::coordinateName(i)
-                      << "and" << coordinates_t::coordinateName(j) << "is" << denominator;
             // denominator maybe near 0. which will produce infinity as a result.
             // That is not considered a error.
 
