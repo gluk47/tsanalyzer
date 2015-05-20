@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>672</width>
-    <height>375</height>
+    <width>817</width>
+    <height>528</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,6 +72,13 @@
        </property>
        <property name="toolButtonStyle">
         <enum>Qt::ToolButtonTextBesideIcon</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="saveAll">
+       <property name="text">
+        <string>Сохранить в файлы графики всех пар</string>
        </property>
       </widget>
      </item>

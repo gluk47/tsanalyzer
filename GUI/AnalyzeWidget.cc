@@ -68,6 +68,10 @@ void processSeries (const QDir& destDir, const QDir& dir, const QString& fname) 
 
     TimeSeries ts;
     ts.readFile(dir.absoluteFilePath(fname));
+    if (ts.size() < 2)
+        // must have been some wrong file, not a time series
+        return;
+
     TimeSeries tendency_ts = ts.tendencySeries();
 
     QFile codedfile (destDir.absoluteFilePath(fname));
@@ -135,19 +139,15 @@ void AnalyzeWidget::processAllSeries() {
     ui->progressBar->show();
     ui->progressBar->setValue(0);
     QStringList lst = dir.entryList(QDir::Readable | QDir::Files);
-    for (auto i = lst.begin(); i != lst.end(); ) {
-        if (i->endsWith(".coeffts"))
-            i = lst.erase(i);
-        else
-            ++i;
-    }
     ui->progressBar->setMaximum(lst.size());
     QApplication::processEvents();
     for (QString fname : lst) {
         if (stop)
             break;
 
-        processSeries (destDir, dir, fname);
+        if (not fname.toLower().endsWith(".coeffts"))
+            processSeries (destDir, dir, fname);
+
         ui->progressBar->setValue(ui->progressBar->value() + 1);
         if (ui->progressBar->value() % 2)
             QApplication::processEvents();
@@ -157,6 +157,7 @@ void AnalyzeWidget::processAllSeries() {
     ui->progressBar->hide();
 }
 
+using std::isnan;
 void AnalyzeWidget::FindCorrelations() {
     status ("Расчёт корреляций: загрузка данных");
     QApplication::processEvents();
@@ -175,13 +176,14 @@ void AnalyzeWidget::FindCorrelations() {
         QFile file (processed.filePath(fname));
         file.open(QIODevice::ReadOnly);
         QTextStream coordinates (&file);
-        for (size_t j = 0; j < coordinates_t::nValues; ++j)
+        for (size_t j = 0; j < coordinates_t::nValues; ++j) {
             coordinates >> src_matrix [progress].values[j];
+        }
         ui->progressBar->setValue(++progress);
         QApplication::processEvents();
     }
 
-    status ("Расчёт корреляций");
+    status ("Расчёт корреляций: обработка данных");
     ui->progressBar->setValue(progress = 0);
     ui->progressBar->setMaximum(coordinates_t::nValues * (coordinates_t::nValues - 1) / 2);
     ui->correlations->setVisible(true);
@@ -194,11 +196,15 @@ void AnalyzeWidget::FindCorrelations() {
     for (size_t i = 0; i < coordinates_t::nValues; ++i) {
         E [i] = std::accumulate (src_matrix.begin(), src_matrix.end(), 0.,
                                  [i](double s, const coordinates_t& v)
-                                 { return s + v.values[i]; }) / src_matrix.size();
+                                 { if (isnan (v.values[i])) return s;
+                                   return s + v.values[i];
+                                 }) / src_matrix.size();
 
         D [i] = std::accumulate (src_matrix.begin(), src_matrix.end(), 0.,
                                 [i, E](double s, const coordinates_t& v)
-                                { return s + std::pow (v.values[i] - E[i], 2); });
+                                {   if (isnan (v.values[i])) return s;
+                                    return s + std::pow (v.values[i] - E[i], 2);
+                                });
     }
 
     for (size_t i = 0; i < coordinates_t::nValues; ++i) {
@@ -219,19 +225,34 @@ void AnalyzeWidget::FindCorrelations() {
         for (size_t j = i; j < coordinates_t::nValues; ++j) {
             double quantifier = std::accumulate (src_matrix.begin(), src_matrix.end(), 0.,
                                                 [i, j, E](double s, const coordinates_t& v)
-                                                { return s + (v.values[i] - E[i]) * (v.values[j] - E[j]); });
+                                                {   if (isnan (v.values[i]) or isnan (v.values[j])) return s;
+                                                    return s + (v.values[i] - E[i]) * (v.values[j] - E[j]);
+                                                });
             double denominator = sqrt(D[i] * D[j]);
             // denominator maybe near 0. which will produce infinity as a result.
             // That is not considered a error.
 
-            QString answer = QString::number(quantifier / denominator);
+            double answer = quantifier / denominator;
+            QString sanswer = QString::number(answer);
             auto item = ui->correlations->item(i, j);
+            auto setColor = [answer](QTableWidgetItem* item){
+                if (std::isnan(answer))
+                    item->setBackgroundColor(QColor::fromRgb(255, 180, 180));
+                else
+                    item->setBackgroundColor(QColor::fromRgb(127 + abs (answer) * 128, 255, 127 + abs (answer) * 128));
+            };
             if (item == nullptr) {
-                ui->correlations->setItem(i, j, new QTableWidgetItem (answer));
-                ui->correlations->setItem(j, i, new QTableWidgetItem (answer));
+                item = new QTableWidgetItem (sanswer);
+                setColor(item);
+                ui->correlations->setItem(i, j, item);
+
+                item = new QTableWidgetItem (sanswer);
+                setColor(item);
+                ui->correlations->setItem(j, i, item);
             } else {
-                item->setText(answer);
-                ui->correlations->item(j, i)->setText(answer);
+                item->setText(sanswer);
+                setColor(item);
+                ui->correlations->item(j, i)->setText(sanswer);
             }
 
             ui->progressBar->setValue(++progress);

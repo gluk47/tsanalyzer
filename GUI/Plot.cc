@@ -68,8 +68,10 @@ void Plot::refreshPlot() {
     ui->progressBar->setValue(0);
     QStringList lst = setDir.entryList(QStringList() << "*.coords",
                                        QDir::Readable | QDir::Files);
-    if (lst.isEmpty())
+    if (lst.isEmpty()) {
+        qDebug () << "";
         return;
+    }
 
     ui->progressBar->setMaximum(lst.size());
     QApplication::processEvents();
@@ -79,6 +81,9 @@ void Plot::refreshPlot() {
     ui->plotWidget->graph(0)->setPen(QColor(50, 50, 50, 255));
     ui->plotWidget->graph(0)->setLineStyle(QCPGraph::lsNone);
     ui->plotWidget->graph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 4));
+
+    ui->plotWidget->xAxis->setLabel(coordinates_t::coordinateName(ui->axisX->currentIndex()));
+    ui->plotWidget->yAxis->setLabel(coordinates_t::coordinateName(ui->axisY->currentIndex()));
 
     QVector <double> x, y;
 
@@ -112,6 +117,9 @@ void Plot::refreshPlot() {
     for (QString fname : lst) {
         if (not read_file (fname, x1, y1))
             continue;
+        if (std::isnan(x1) or std::isnan(y1))
+            // that means that the coordinate is not applicable to the series, just ignore this point
+            continue;
         x.append (x1);
         xmin = std::min (xmin, x1);
         xmax = std::max (xmax, x1);
@@ -126,6 +134,12 @@ void Plot::refreshPlot() {
     ui->plotWidget->graph(0)->setData(y, x);
     qDebug () << "Range:" << xmin << ".." << xmax << "×"
               << ymin << ".." << ymax;
+
+    xmin *= 0.98;
+    xmax *= 1.02;
+
+    ymin *= 0.98;
+    ymax *= 1.02;
 
     ui->plotWidget->xAxis->setRange(xmin, xmax);
     ui->plotWidget->yAxis->setRange(ymin, ymax);
@@ -158,4 +172,35 @@ void Plot::on_savePlot_clicked() {
         ui->plotWidget->savePng(fname);
     else if (file.suffix().toLower() == "jpg")
         ui->plotWidget->saveJpg(fname);
+}
+
+void Plot::on_saveAll_clicked() {
+    const auto x = ui->axisX->currentIndex(), y = ui->axisY->currentIndex();
+    scope_exit restore ([this, x, y]{
+        ui->axisX->setCurrentIndex(x);
+        ui->axisY->setCurrentIndex(y);
+        refreshPlot();
+    });
+
+    QDir target (ui->setPath->text());
+    target.mkdir("plots");
+    target.cd("plots");
+
+    QString cmdline;
+    for (unsigned i = 0; i < coordinates_t::nValues - 1; ++i)
+        for (unsigned j = i + 1; j < coordinates_t::nValues; ++j) {
+            ui->axisX->setCurrentIndex(i);
+            ui->axisY->setCurrentIndex(j);
+            refreshPlot();
+            auto fname = target.absoluteFilePath(QString("%1×%2.pdf")
+                                                 .arg(coordinates_t::coordinateName(i))
+                                                 .arg(coordinates_t::coordinateName(j)));
+            cmdline += QString ("'%1' ").arg(fname);
+            ui->plotWidget->savePdf(fname);
+        }
+
+    system (QString ("pdftk %1 output '%2'")
+            .arg(cmdline)
+            .arg(target.absoluteFilePath("plots.pdf"))
+            .toLocal8Bit());
 }

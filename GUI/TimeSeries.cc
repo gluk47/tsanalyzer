@@ -57,6 +57,9 @@ void TimeSeries::removeTrend() {
 }
 
 TimeSeries TimeSeries::tendencySeries() const {
+    if (size() == 0)
+        return TimeSeries ();
+
     QVector <float> v (size());
     v[0] = 0;
     for (int i = 1; i < size(); ++i) {
@@ -69,10 +72,6 @@ TimeSeries TimeSeries::tendencySeries() const {
     }
     TimeSeries ans (std::move (v));
     return ans;
-}
-
-double abs (double _) {
-    return _<0?-_:_;
 }
 
 float TimeSeries::harmonicComplexity() const {

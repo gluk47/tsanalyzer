@@ -45,4 +45,8 @@ private:
     std::function <void ()> f;
 };
 
+inline double abs (double _) {
+    return _<0?-_:_;
+}
+
 #endif // HELPERS_H

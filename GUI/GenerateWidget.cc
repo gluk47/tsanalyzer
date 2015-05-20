@@ -145,10 +145,10 @@ void GenerateWidget::generate() {
 
     setSize = 0;
     forAllCoefficients([this, errmean, errdisp, setPath, &id](const QVector <double>& k){
-                if (setSize > 3000) {
-                    std::cerr << "aborting generation, setSize exceeds 3000\n";
-                    return;
-                }
+//                if (setSize > 3000) {
+//                    std::cerr << "aborting generation, setSize exceeds 3000\n";
+//                    return;
+//                }
                 const QString fname =
                         setPath.absoluteFilePath("ts_" + QString::number(id++));
                 generate_series(

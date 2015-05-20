@@ -24,6 +24,8 @@ private slots:
 
     void on_savePlot_clicked();
 
+    void on_saveAll_clicked();
+
 private:
     Ui::Plot *ui;
     QwtPlot* plot;
