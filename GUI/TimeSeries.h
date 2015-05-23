@@ -46,13 +46,17 @@ public:
      * The C# source for this function has been graciously donated by
      * @author nastyaloginovaa@gmail.com
      */
-    float harmonicComplexity () const;
+    double harmonicComplexity () const;
 
-    float herstValue () const;
+    double herstValue() const;
 
-    float fractalDimensionality () const { return 2 - herstValue(); }
-    /// Мера символьного разнообразия
-    double charDifDim () const;
+    double fractalDimensionality () const { return 2 - herstValue(); }
+    /// Measure of symbolic diversity values
+    struct symbolicDiversity_t {
+        double window; ///< normed window size
+        double maxdiff; ///< maximal symbolic diversity loss
+    };
+    symbolicDiversity_t symbolicDiversity () const;
 
     int size() const { return _Values.size(); }
 private:

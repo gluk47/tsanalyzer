@@ -7,6 +7,8 @@
 #include <cmath>
 #include <limits>
 
+using std::fabs;
+
 constexpr double M_2PI = 2 * M_PI;
 
 TimeSeries::TimeSeries(QVector<float> values) : _Values (values) {
@@ -71,10 +73,11 @@ TimeSeries TimeSeries::tendencySeries() const {
             v[i] = 0;
     }
     TimeSeries ans (std::move (v));
+    ans.setNLevels(3);
     return ans;
 }
 
-float TimeSeries::harmonicComplexity() const {
+double TimeSeries::harmonicComplexity() const {
     /// The C# source for this function has been graciously donated
     /// by nastyaloginovaa@gmail.com
     const int n = _Values.size();
@@ -97,8 +100,8 @@ float TimeSeries::harmonicComplexity() const {
                 sumA += fiA[i];
             }
 
-            B[k] = abs(2. / (n - 1) * ((fiB[0] + fiB[n - 1]) / 2. + sumB));
-            A[k] = abs(2. / (n - 1) * ((fiA[0] + fiA[n - 1]) / 2. + sumA));
+            B[k] = fabs(2. / (n - 1) * ((fiB[0] + fiB[n - 1]) / 2. + sumB));
+            A[k] = fabs(2. / (n - 1) * ((fiA[0] + fiA[n - 1]) / 2. + sumA));
         }
     }
 
@@ -110,40 +113,46 @@ float TimeSeries::harmonicComplexity() const {
     std::sort (R.begin(), R.end(), [](float a, float b){return b < a;});
     double sum = std::accumulate (R.begin(), R.end(), 0.);
     double complexity = 0.;
-    for (int i = 0; i < R.size(); ++i)
+    for (int i = 1; i < R.size(); ++i)
         complexity += R[i] / sum * i;
 
     return complexity;
 }
 
-float TimeSeries::herstValue() const {
+double TimeSeries::herstValue() const {
     if (size() < 2) {
         return std::numeric_limits<double>::quiet_NaN();
     }
 
-    double R=0, S=0;
-    const int n=_Values.size();
-    double EX=0, MX=0; //среднее значение временного ряда
-    double W[n]; //вектор отклонений
-    double Wmax=0, Wmin=0;
+    const int n = _Values.size();
 
-    int i;
-    for (i=0; i<n; i++) EX+=_Values[i]; MX=EX/n;
+    // выборочное среднее
+    const double MX = [this, n]{
+        auto ans = 0.;
+        for (auto v : _Values)
+            ans += v;
+        ans /= n;
+        return ans;
+    }();
 
-    EX=0;
-    for (i=0; i<n; i++) { EX+=_Values[i]; W[i]=EX - (i+1)*MX; }
+    double EX = 0., S = 0.;
+    double Wmax = _Values [0] - MX,
+           Wmin = Wmax;
+    for (int i = 0; i < n; ++i) {
+        EX += _Values[i];
+        auto W = EX - (i+1) * MX;
+        if (W > Wmax)
+            Wmax = W;
+        else if (W < Wmin)
+            Wmin = W;
 
-    for (i=0; i<n; i++)
-    {
-         if (Wmax<W[i]) Wmax=W[i];
-         if (Wmin>W[i]) Wmin=W[i];
+        S += pow((_Values[i] - MX), 2);
     }
-    R=Wmax-Wmin;
 
-    for (i=0; i<n; i++) { S+= pow((_Values[i]-MX), 2); }
-    S=sqrt(S/n);
+    double R = Wmax - Wmin;
+    S = sqrt (S/n);
 
-    return log(R/S)/log(n);
+    return log (R/S) / log(n);
 }
 
 void TimeSeries::_Encode() const {
@@ -162,64 +171,71 @@ void TimeSeries::_Encode() const {
     }
 }
 
-double TimeSeries::charDifDim() const {
+TimeSeries::symbolicDiversity_t TimeSeries::symbolicDiversity() const {
     const int n = _Values.size();
-    auto coded = encoded();
-    double dtV_m;
+    const auto& coded = encoded();
     int m;
 
-    const QVector <double> abc = [this]{
-        QVector <double> ans;
-        for (unsigned k = 0; k < nLevels(); ++k)
-            ans.append(k); // k-мощность алфавита, элементы алфавита - целые от 0 до k-1
-        return ans;
-    }();
+    struct word_t {
+        using value_t = unsigned long;
+        value_t value = 0;
+        word_t (value_t v) : value (v) {}
+        operator value_t& () {
+            return value;
+        }
+        operator value_t () const {
+            return value;
+        }
+    };
 
-    QVector <double> Cm(n, 0), dC(n, 0);
-    QVector <double> ci (nLevels(), 0); //вектор частотной встречаемости слов
-    QVector <QVector <double>> wi_m; //вектор многообразия слов длины m
+    using frequencies_t = QMap <word_t, unsigned>;
 
-    wi_m.append(abc);
-    for (int j1 = 0; j1 < n; ++j1) {
-        for (unsigned j = 0; j < nLevels(); ++j) {
-            if (coded[j1] == abc[j]) {
-                ++ci[j];
-                break;
+    double Cm_prev = 0., dC_prev = 0.;
+
+    {
+        frequencies_t ci; //вектор частотной встречаемости слов
+        for (auto c : coded)
+            ++ci [c];
+
+        for (double c : ci.values()) {
+            double f = c / n;
+            Cm_prev -= f * (log (f)) / log (nLevels());
+        }
+    }
+
+    for (m = 2; m <= n; ++m) {
+        frequencies_t ci;
+        for (int left_bound = 0; left_bound <= n - m; ++left_bound) {//цикл по словам временного ряда
+            word_t word = coded [left_bound];
+            for (int right_bound = left_bound + 1; right_bound < left_bound + m; ++right_bound){
+                word *= nLevels();
+                word += coded [right_bound];
+            }
+            ++ci [word];
+        }
+
+        double Cm = 0.;
+        {
+            const double log_nwords = log (pow (nLevels(), m)); //log числа возможных слов длины m над алфавитом abc
+            const double dl = n - m + 1;
+            for (double c : ci.values()) {
+                double f = c / dl;
+                Cm -= f * log (f) / log_nwords;
             }
         }
-    }
 
-    for (unsigned j = 0; j < nLevels(); ++j) {
-        if (ci[j])
-            Cm[0]+=((ci[j]/n)*(log(n/ci[j])) / log(nLevels()));
-    }
-
-    for (m = 1; m < n; ++m) {
-        int j = pow (nLevels(), m); //число возможных слов длины m над алфавитом abc
-        wi_m.append(QVector <double>());
-        for (unsigned j1 = 0; j1 < nLevels(); ++j1) {
-            int j0 = wi_m[m-1].size(); //число различных слов длины m-1
-            for (int j2 = 0; j2 < j0; ++j2)
-                wi_m[m].append(abc[j1] * pow(10,m) + wi_m[m-1][j2]);
-        }
-        ci.fill(0,j);
-        for (int j1=0; j1<(n-m); ++j1) {//цикл по словам временного ряда
-            dtV_m=0;
-            for (int j2=0; j2<m+1; ++j2)
-                dtV_m+= (coded[j1+j2] * pow(10,m-j2));
-            for (int j0 = 0; j0 < j; ++j0) //пробег по всем словам длины m над алфавитом abc
-                if (dtV_m == wi_m[m][j0]) {
-                    ++ci[j0];
-                    break;
-                }
-        }
-        for (int j0 = 0; j0 < j; ++j0) {
-            if (ci[j0])
-                Cm[m]+=((ci[j0]/(n-m))*(log((n-m)/ci[j0])) / log(j));
-        }
-        dC[m]=Cm[m-1]-Cm[m];
-        if (dC[m] < dC[m-1])
+        auto dC = Cm_prev - Cm;
+        if (dC < dC_prev)
             break;
+
+        dC_prev = dC;
+        Cm_prev = Cm;
     }
-    return (m / floor(log(n)/log(nLevels())));
+
+    double window = static_cast <double> (m - 1) /
+                                        floor(log(n) / log(nLevels()));
+    return symbolicDiversity_t {
+        window,
+        dC_prev
+    };
 }

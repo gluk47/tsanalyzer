@@ -1,6 +1,7 @@
 #ifndef ANALYZEWIDGET_H
 #define ANALYZEWIDGET_H
 
+#include <atomic>
 #include <QWidget>
 
 class QLabel;
@@ -36,7 +37,7 @@ private:
     QString destPath ();
     QLabel* correlations_label = nullptr;
     Ui::AnalyzeWidget *ui;
-    bool stop = false;
+    std::atomic <bool> stop {false};
 };
 
 #endif // ANALYZEWIDGET_H

@@ -22,6 +22,8 @@ private slots:
     void generate();
     void countSetSize ();
 
+    void on_browseSetPath_clicked();
+
 private:
     /**
      * @brief Call a function @f for all combinations of coefficients

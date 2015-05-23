@@ -5,7 +5,8 @@
 #-------------------------------------------------
 
 QT       += core gui
-CONFIG   += c++11
+#CONFIG   += c++14
+QMAKE_CXXFLAGS += -std=c++1y
 DEFINES  += _USE_MATH_DEFINES
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport

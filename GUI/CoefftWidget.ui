@@ -26,6 +26,9 @@
      <property name="text">
       <string>изменяется от</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
     </widget>
    </item>
    <item>
@@ -48,6 +51,9 @@
     <widget class="QLabel" name="label_14">
      <property name="text">
       <string>до</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
@@ -72,6 +78,9 @@
      <property name="text">
       <string>с шагом</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
     </widget>
    </item>
    <item>
@@ -86,7 +95,7 @@
       <double>0.100000000000000</double>
      </property>
      <property name="value">
-      <double>1.600000000000000</double>
+      <double>0.700000000000000</double>
      </property>
     </widget>
    </item>

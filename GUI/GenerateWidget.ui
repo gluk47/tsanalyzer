@@ -60,7 +60,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox">
+         <widget class="QSpinBox" name="nValues">
           <property name="minimum">
            <number>10</number>
           </property>
@@ -279,7 +279,7 @@
  <tabstops>
   <tabstop>setPath</tabstop>
   <tabstop>browseSetPath</tabstop>
-  <tabstop>spinBox</tabstop>
+  <tabstop>nValues</tabstop>
   <tabstop>errMean</tabstop>
   <tabstop>errDisperse</tabstop>
  </tabstops>

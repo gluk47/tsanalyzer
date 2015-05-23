@@ -5,8 +5,11 @@
 #include "TimeSeries.h"
 
 #include <assert.h>
-#include <future>
+#include <chrono>
 #include <deque>
+#include <future>
+#include <iostream>
+#include <queue>
 
 #include <QDebug>
 #include <QFileDialog>
@@ -61,12 +64,18 @@ void AnalyzeWidget::on_browseSetPath_clicked() {
     ui->status->hide();
 }
 
-void processSeries (const QDir& destDir, const QDir& dir, const QString& fname) {
+void processSeries (const QDir& destDir,
+                    const QDir& dir,
+                    const QString& fname,
+                    unsigned nSegments) {
     QFile coordFile (destDir.absoluteFilePath(fname + ".coords"));
     if (coordFile.exists())
             return;
+    // just create a file
+    coordFile.open (QIODevice::WriteOnly | QIODevice::Truncate);
 
     TimeSeries ts;
+    ts.setNLevels(nSegments);
     ts.readFile(dir.absoluteFilePath(fname));
     if (ts.size() < 2)
         // must have been some wrong file, not a time series
@@ -92,7 +101,6 @@ void processSeries (const QDir& destDir, const QDir& dir, const QString& fname) 
     QProcess t_arc;
     t_arc.start("../lzma e -so \"" + tendencyFile.fileName() + "\"");
 
-    coordFile.open (QIODevice::WriteOnly | QIODevice::Truncate);
     QTextStream coords (&coordFile);
 
     coords << ts.harmonicComplexity() << "\n"
@@ -101,8 +109,14 @@ void processSeries (const QDir& destDir, const QDir& dir, const QString& fname) 
     coords << ts.fractalDimensionality() << "\n"
            << tendency_ts.fractalDimensionality() << "\n";
 
-    coords << ts.charDifDim() << "\n"
-           << tendency_ts.charDifDim() << "\n";
+    auto diversity = ts.symbolicDiversity();
+    auto tendency_diversity = tendency_ts.symbolicDiversity();
+
+    coords << diversity.window << "\n"
+           << tendency_diversity.window << "\n"
+
+           << diversity.maxdiff << "\n"
+           << tendency_diversity.maxdiff << "\n";
 
     arc.waitForFinished();
     auto compressed = arc.readAllStandardOutput();
@@ -120,44 +134,172 @@ void processSeries (const QDir& destDir, const QDir& dir, const QString& fname) 
         return;
 */
     } else {
-        coords << 1. / (static_cast <double> (codedfile.size() / compressed.size()) - 1)
+        coords << 1. / (static_cast <double> (codedfile.size()) / compressed.size() - 1)
                << "\n";
         t_arc.waitForFinished();
         auto t_compressed = t_arc.readAllStandardOutput();
 
-        coords << 1. / (static_cast <double> (tendencyFile.size()
-                                              / t_compressed.size()) - 1)
+        coords << 1. / (static_cast <double> (tendencyFile.size()) / t_compressed.size() - 1)
                << "\n";
     }
+}
+
+template <typename T, typename R>
+std::string to_string(std::chrono::duration<T, R> ns) {
+    using namespace std;
+    using namespace std::chrono;
+    typedef duration<int, ratio<86400>> days;
+    auto d = duration_cast<days>(ns);
+    ns -= d;
+    auto h = duration_cast<hours>(ns);
+    ns -= h;
+    auto m = duration_cast<minutes>(ns);
+    ns -= m;
+    auto s = duration_cast<seconds>(ns);
+
+    std::string ans;
+
+    if (d.count() > 0)
+        ans = plural("д", "ень", "ня", "ней", d.count(), true).toStdString() + " ";
+
+    if (not ans.empty()) {
+        ans += to_string (h.count()) + ":";
+    } else if (h.count() > 0) {
+        ans += to_string (h.count()) + ":";
+    }
+
+    if (not ans.empty()) {
+        if (m.count() < 10)
+            ans += "0";
+        ans += to_string (m.count()) + ":";
+    } else if (m.count() > 0) {
+        ans += to_string (m.count()) + ":";
+    }
+
+    if (!ans.empty()) {
+        if (s.count() < 10)
+            ans += "0";
+        ans += to_string (s.count());
+    } else {
+        if (s.count() > 0)
+            ans = to_string (s.count());
+        else
+            ans = "less than a second";
+    }
+
+    return ans;
+}
+
+void process_all_series_background(const QDir& dir, const QDir& destDir,
+                                   const QStringList& lst, int id, int nthreads,
+                                   const volatile std::atomic <bool>* const stop,
+                                   unsigned nSegments) {
+    std::cerr << "Thread " << id << " out of " << nthreads << " started\n";
+    auto i = lst.constBegin();
+    for (int next = 0; next < id; ++next) {
+        ++i;
+        if (i == lst.constEnd()) {
+            std::cerr << "Thread " << id << " is overkill for this small list, finished\n";
+            return;
+        }
+    }
+
+    while (not *stop) {
+        const auto& fname = *i;
+        processSeries (destDir, dir, fname, nSegments);
+
+        for (int next = 0; next < nthreads; ++next) {
+            ++i;
+            if (i == lst.constEnd()) {
+                std::cerr << "Thread " << id << " finished\n";
+                return;
+            }
+        }
+    }
+    std::cerr << "Thread " << id << " interrupted and terminated\n";
 }
 
 void AnalyzeWidget::processAllSeries() {
     QDir dir (ui->setPath->text());
     QDir destDir(destPath());
     destDir.mkdir(destDir.absolutePath());
-    status ("Обработка временных рядов...");
+    status ("Обработка временных рядов...\nЗагрузка данных");
     ui->progressBar->show();
     ui->progressBar->setValue(0);
     QStringList lst = dir.entryList(QDir::Readable | QDir::Files);
-    ui->progressBar->setMaximum(lst.size());
+    for (auto i = lst.begin(); i != lst.end();) {
+        if (i->toLower().endsWith(".coeffts"))
+            i = lst.erase(i);
+        else
+            ++i;
+    }
+#ifdef QT_DEBUG
+    const auto nthreads = 1u;
+#else
+    const auto nthreads = std::thread::hardware_concurrency();
+#endif
+    const auto N = lst.size() / nthreads;
+    ui->progressBar->setMaximum(N);
     QApplication::processEvents();
-    for (QString fname : lst) {
-        if (stop)
-            break;
+    std::queue <std::chrono::steady_clock::time_point> times;
+    const size_t qsize = [N]{
+        auto ans = std::min (500u, N / 50);
+        return std::max (5u, ans);
+    }();
+    int progress = 0;
+    std::vector <std::future <void>> workers;
+    workers.reserve(nthreads - 1);
+    const unsigned nSegments = ui->nSegments->value();
+    for (int id = nthreads - 1; id > 0; --id)
+        workers.push_back(std::async(std::launch::async,
+                                     process_all_series_background, dir, destDir,
+                                     lst, id, nthreads, &stop,
+                                     nSegments));
 
+    // lambda here is a syntax sugar for 'return' below
+    [&]{
+    for (auto i = lst.constBegin(); not stop;) {
+        const auto& fname = *i;
+
+        auto now = std::chrono::steady_clock::now();
+        times.push(now);
+        if (times.size() <= qsize) {
+            status (tr("Обработка временных рядов...\n%1").arg(fname));
+        } else {
+            auto start = times.front();
+            times.pop();
+            auto qtime = now - start;
+            auto sleft = N - progress;
+            auto left = sleft * (qtime / qsize);
+            status (tr("Обработка временных рядов...\n%1\nОсталось %2")
+                    .arg(fname)
+                    .arg(QString::fromStdString(to_string(left))));
+        }
         if (not fname.toLower().endsWith(".coeffts"))
-            processSeries (destDir, dir, fname);
+            processSeries (destDir, dir, fname, nSegments);
 
-        ui->progressBar->setValue(ui->progressBar->value() + 1);
-        if (ui->progressBar->value() % 2)
+        ui->progressBar->setValue(++progress);
+        if (unsigned (progress) % 2)
             QApplication::processEvents();
+
+        for (unsigned next = 0; next < nthreads; ++next) {
+            ++i;
+            if (i == lst.constEnd())
+                return; //< from the lambda
+        }
+    }
+    }();
+
+    status("Обработка временных рядов...\nОжидание завершения всех потоков");
+
+    for (auto&& f : workers) {
+        f.get();
     }
 
     status("Все временные ряды обработаны!");
     ui->progressBar->hide();
 }
 
-using std::isnan;
 void AnalyzeWidget::FindCorrelations() {
     status ("Расчёт корреляций: загрузка данных");
     QApplication::processEvents();
@@ -239,7 +381,7 @@ void AnalyzeWidget::FindCorrelations() {
                 if (std::isnan(answer))
                     item->setBackgroundColor(QColor::fromRgb(255, 180, 180));
                 else
-                    item->setBackgroundColor(QColor::fromRgb(127 + abs (answer) * 128, 255, 127 + abs (answer) * 128));
+                    item->setBackgroundColor(QColor::fromRgb(127 + fabs (answer) * 128, 255, 127 + fabs (answer) * 128));
             };
             if (item == nullptr) {
                 item = new QTableWidgetItem (sanswer);

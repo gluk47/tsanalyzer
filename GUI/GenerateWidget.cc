@@ -17,28 +17,6 @@
 using std::cerr;
 constexpr float M_2PI = M_PI * 2, M_2_E = 2 / M_E;
 
-QString plural (const char* base,
-                const char* one,
-                const char* some,
-                const char* many,
-                int value,
-                bool prepend_number = false) {
-    value = abs (value);
-    QString ans = base;
-    if (prepend_number)
-        ans = QString::number(value) + ans;
-    if (10 < value and value < 20)
-        return ans + many;
-
-    char rest = value % 10;
-    if (rest == 1)
-        return ans + one;
-    if (0 < rest and rest < 4)
-        return ans + some;
-    else
-        return ans + many;
-}
-
 QString spaceNumber (int n) {
     QString ans = QString::number(n);
     for (int i = ans.size() - 3; i > 0; i -= 3)
@@ -123,7 +101,7 @@ void GenerateWidget::forAllCoefficients (std::function<void (const QVector<doubl
 
 void GenerateWidget::generate() {
     unsigned id = 0;
-    const unsigned npoints = 1500;
+    const unsigned npoints = ui->nValues->value();
     QDir setPath (ui->setPath->text());
 
     countSetSize();
@@ -144,7 +122,7 @@ void GenerateWidget::generate() {
     setPath.mkdir(setPath.absolutePath());
 
     setSize = 0;
-    forAllCoefficients([this, errmean, errdisp, setPath, &id](const QVector <double>& k){
+    forAllCoefficients([this, errmean, errdisp, setPath, &id, npoints](const QVector <double>& k){
 //                if (setSize > 3000) {
 //                    std::cerr << "aborting generation, setSize exceeds 3000\n";
 //                    return;
@@ -152,7 +130,7 @@ void GenerateWidget::generate() {
                 const QString fname =
                         setPath.absoluteFilePath("ts_" + QString::number(id++));
                 generate_series(
-                   [k, errmean, errdisp](float step){
+                   [k, errmean, errdisp, npoints](float step){
                        return series_generator(k, step)
                             + get_error(errmean, errdisp);
                    },
@@ -221,4 +199,8 @@ void GenerateWidget::iterateK (QVector <double>& k,
     auto range = kWidgets [index]->getInfo();
     for (k [index] = range.min; k [index] < range.max; k [index] += range.step)
         iterateK(k, f, index + 1);
+}
+
+void GenerateWidget::on_browseSetPath_clicked() {
+///@todo
 }

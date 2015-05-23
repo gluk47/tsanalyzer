@@ -95,6 +95,9 @@ void Plot::refreshPlot() {
     auto read_file = [setDir, this](const QString& fname, double& x, double& y){
         QFile file (setDir.filePath(fname));
         file.open(QIODevice::ReadOnly);
+        if (file.size() < 2)
+            // some invalid empty file
+            return false;
         QTextStream coordinates (&file);
         coordinates_t point;
         for (size_t j = 0; j < coordinates_t::nValues; ++j)
@@ -115,6 +118,9 @@ void Plot::refreshPlot() {
 
     int progress = 0;
     for (QString fname : lst) {
+        ui->progressBar->setValue(progress++);
+        if (progress % 20 == 0)
+            QApplication::processEvents();
         if (not read_file (fname, x1, y1))
             continue;
         if (std::isnan(x1) or std::isnan(y1))
@@ -126,9 +132,6 @@ void Plot::refreshPlot() {
         y.append (y1);
         ymin = std::min (ymin, y1);
         ymax = std::max (ymax, y1);
-        ui->progressBar->setValue(++progress);
-        if (progress % 20 == 0)
-            QApplication::processEvents();
     }
 
     ui->plotWidget->graph(0)->setData(y, x);

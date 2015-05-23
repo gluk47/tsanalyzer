@@ -5,22 +5,24 @@
 #include <cstddef>
 #include <functional>
 class QWidget;
-class QString;
 #include <QObject>
+#include <QString>
 
 struct coordinates_t {
-    static constexpr size_t nValues = 8;
+    static constexpr size_t nValues = 10;
     union {
         double values [nValues];
         struct {
             double harmonicComplexity,
                    tendencyHarmonicComplexity,
-                   KolmogorovComplexity,
-                   tendencyKolmogorovComplexity,
                    fractalDimensionality,
                    tendencyFractalDimensionality,
-                   characterVariability,
-                   tendencycharacterVariability;
+                   symbolicDiversityWindow,
+                   tendencySymbolicDiversityWindow,
+                   symbolicDiversityDiff,
+                   tendencySymbolicDiversityDiff,
+                   KolmogorovComplexity,
+                   tendencyKolmogorovComplexity;
         } by_name;
     };
     /// User-readable coordinate name (in Russian)
@@ -45,8 +47,11 @@ private:
     std::function <void ()> f;
 };
 
-inline double abs (double _) {
-    return _<0?-_:_;
-}
+QString plural (const char* base,
+                const char* one,
+                const char* some,
+                const char* many,
+                int value,
+                bool prepend_number = false);
 
 #endif // HELPERS_H
