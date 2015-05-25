@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QTextStream>
 
+#include <assert.h>
 #include <cmath>
 #include <functional>
 #include <iostream>
@@ -39,23 +40,43 @@ float get_error (double mean, double disperse) {
  * @param npoints how many points to sample
  * @param fname file to store data to
  */
-void generate_series (std::function <float (float)> generator,
+void generate_series (std::function <float (float, unsigned)> generator,
                       unsigned npoints,
                       const QString& fname) {
-    const float step = 1.f / npoints;
+    assert (npoints > 1);
+
+    const float step = 1.f / (npoints - 1);
 
     QFile file (fname);
     file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
     QTextStream out(&file);
     for (float arg = 0.f; npoints-->0; arg += step)
-        out << generator (arg) << "\n";
+        out << generator (arg, npoints) << "\n";
 }
 
-double series_generator (const QVector <double>& k, double x) {
+double stochastic (unsigned m, double r) {
+    static double last_r = -1;
+    static QMap <unsigned, double> cache;
+    if (r != last_r) {
+        cache.clear();
+        cache.insert(0u, 1.);
+    }
+
+    if (cache.contains(m))
+        return cache [m];
+
+    auto fm = stochastic (m - 1, r);
+    auto ans = 4 * r * fm * (1 - fm);
+    cache.insert(m, ans);
+    return ans;
+}
+
+double series_generator (const QVector <double>& k, double x, unsigned index) {
     return k[0] * sin (k[1] * M_2PI * x)
          + k[2] * x
          + k[3] * exp (k[4] * M_2_E * x)
-         + k[5] * log (k[6] * M_E * (x + 1));
+         + k[5] * log (k[6] * M_E * (x + 1))
+         + k[7] * stochastic(k[8] + index, k[9]);
 }
 
 GenerateWidget::GenerateWidget(QWidget *parent) :
@@ -74,15 +95,26 @@ GenerateWidget::GenerateWidget(QWidget *parent) :
     kWidgets.append(w); \
     ui->kWidgets->layout()->addWidget(w);
 
-    ADD(a);
-    ADD(α);
-    ADD(b);
-    ADD(c);
-    ADD(γ);
-    ADD(d);
-    ADD(δ);
+    ADD(a); // 0
+    ADD(α); // 1
+    ADD(b); // 2
+    ADD(c); // 3
+    ADD(γ); // 4
+    ADD(d); // 5
+    ADD(δ); // 6
     w->setMin(1e-2);
     w->setMax(3);
+
+    ADD(h); // 7
+    ADD(m); // 8
+    w->setMin(100);
+    w->setMax(101);
+    w->setStep(2);
+
+    ADD(r); // 9
+    w->setMin(.91);
+    w->setMax(.96);
+    w->setStep(.05);
 
 #undef ADD
 
@@ -130,8 +162,8 @@ void GenerateWidget::generate() {
                 const QString fname =
                         setPath.absoluteFilePath("ts_" + QString::number(id++));
                 generate_series(
-                   [k, errmean, errdisp, npoints](float step){
-                       return series_generator(k, step)
+                   [k, errmean, errdisp, npoints](float step, unsigned index){
+                       return series_generator(k, step, index)
                             + get_error(errmean, errdisp);
                    },
                    npoints,
@@ -149,7 +181,7 @@ void GenerateWidget::generate() {
                if (setSize % 10 == 0)
                    QApplication::processEvents();
     });
-    generate_series([](float){return get_error(0., .8);}, npoints,
+    generate_series([](float, unsigned){return get_error(0., .8);}, npoints,
                     setPath.absoluteFilePath( "ts_const"));
 
     ui->labelReady->show();
@@ -197,7 +229,7 @@ void GenerateWidget::iterateK (QVector <double>& k,
     }
 
     auto range = kWidgets [index]->getInfo();
-    for (k [index] = range.min; k [index] < range.max; k [index] += range.step)
+    for (k [index] = range.min; k [index] <= range.max; k [index] += range.step)
         iterateK(k, f, index + 1);
 }
 

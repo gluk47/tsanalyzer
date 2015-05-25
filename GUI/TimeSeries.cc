@@ -64,10 +64,11 @@ TimeSeries TimeSeries::tendencySeries() const {
 
     QVector <float> v (size());
     v[0] = 0;
+    const auto coded = encoded();
     for (int i = 1; i < size(); ++i) {
-        if (_Values[i] > _Values[i - 1])
+        if (coded[i] > coded[i - 1])
             v[i] = 1;
-        else if (_Values[i] < _Values[i - 1])
+        else if (coded[i] < coded[i - 1])
             v[i] = -1;
         else
             v[i] = 0;

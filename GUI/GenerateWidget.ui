@@ -55,7 +55,7 @@
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>Количество значений в ряду:</string>
+           <string>Количество значений n в ряду:</string>
           </property>
          </widget>
         </item>
@@ -82,7 +82,7 @@
          </font>
         </property>
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Сэмплируемая функция: a sin(2πα x) + b x + c exp(2/e γx) + d ln (δ e(x+1)) + ε, где x ∈ [0; 1],&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Сэмплируемая функция: a sin(2πα x) + b x + c exp(2/e γx) + d ln (δ e(x+1)) + h⋅f (m + k) + ε,&lt;/p&gt;&lt;p&gt;где x ∈ [0; 1]; k изменяется от 1 до n; f (m) = 4r⋅f(m−1)(1−f(m−1))&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
@@ -296,8 +296,8 @@
      <y>24</y>
     </hint>
     <hint type="destinationlabel">
-     <x>294</x>
-     <y>230</y>
+     <x>690</x>
+     <y>412</y>
     </hint>
    </hints>
   </connection>

@@ -92,7 +92,7 @@ void processSeries (const QDir& destDir,
 
     QFile tendencyFile (destDir.absoluteFilePath(fname + ".tendency"));
     tendencyFile.open(QIODevice::WriteOnly | QIODevice::Truncate);
-    for (unsigned c : tendency_ts.values())
+    for (int8_t c : tendency_ts.values())
         tendencyFile.write(reinterpret_cast <const char*>(&c), sizeof(c));
     tendencyFile.close();
 
