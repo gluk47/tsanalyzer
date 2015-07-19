@@ -21,7 +21,7 @@ Plot::Plot(QWidget *parent) :
              this, SLOT(refreshPlot()));
 
     ui->progressBar->hide();
-
+    ui->progressMsg->hide();
 
     for (size_t i = 0; i < coordinates_t::nValues; ++i) {
         ui->axisX->addItem(coordinates_t::coordinateName(i));
@@ -53,10 +53,68 @@ void Plot::on_browseSetPath_clicked() {
         ui->setPath->setText(ans);
 }
 
+// avoiding symlink loops (I don't know who and why may create them but anyway)
+// yeah, that's a silly single-threaded solution
+// since we're in the GUI thread, that's no problem.
+static QSet <QString> excludedPaths;
+
+QList <Plot::colouredFiles> Plot::getAllFiles (const QDir& dir, int& nFiles) {
+    excludedPaths.insert(dir.canonicalPath());
+
+    qDebug () << "+++" << dir.canonicalPath();
+
+    const QColor colour = [this, dir]{
+        qDebug () << "Looking for file" << colourFname;
+        QFile colourFile (dir.filePath(colourFname));
+        if (not colourFile.exists()) {
+            qDebug () << "... not found";
+            return defaultColor;
+        }
+        colourFile.open(QIODevice::ReadOnly);
+        if (not colourFile.isOpen()) {
+            qDebug () << "... failed to open";
+            return defaultColor;
+        }
+        int r = -1, g = -1, b = -1;
+        QTextStream filestream (&colourFile);
+        filestream >> r >> g >> b;
+        qDebug () << "... read colors: " << r << g << b;
+        if (r == -1 or g == -1 or b == -1)
+            return defaultColor;
+        return QColor::fromRgb(r, g, b);
+    }();
+
+    QStringList lst = dir.entryList(QStringList() << "*.coords",
+                                    QDir::Readable | QDir::Files);
+    QList <Plot::colouredFiles> ans;
+    nFiles = lst.size();
+    if (nFiles != 0)
+        ans.append(colouredFiles {lst, dir, colour});
+
+    lst = dir.entryList(QDir::Readable | QDir::Dirs | QDir::NoDotAndDotDot);
+    qDebug () << "Examining subfolders of" << dir.absolutePath() << "("
+              << lst.size() << "entries)...";
+    for (const auto& d : lst) {
+        QDir nextDir (dir.filePath(d));
+        if (excludedPaths.contains(nextDir.canonicalPath())) {
+            qDebug () << "Skipping" << nextDir.absolutePath() << "(already analyzed)";
+            continue;
+        }
+        excludedPaths.insert(nextDir.canonicalPath());
+        int nMoreFiles;
+        ans += getAllFiles(nextDir, nMoreFiles);
+        nFiles += nMoreFiles;
+    }
+
+    qDebug () << "---" << dir.absolutePath();
+
+    return ans;
+}
+
 void Plot::refreshPlot() {
     enableControls(false);
     ui->progressBar->show();
-    scope_exit restore_controls ([this]{
+    scope_exit ([this]{
         ui->progressBar->hide();
         enableControls(true);
     });
@@ -65,30 +123,21 @@ void Plot::refreshPlot() {
 
     QDir setDir (ui->setPath->text());
     setDir.cd("processed"); //if exists
-    ui->progressBar->setValue(0);
-    QStringList lst = setDir.entryList(QStringList() << "*.coords",
-                                       QDir::Readable | QDir::Files);
-    if (lst.isEmpty()) {
+    ui->progressMsg->setText(tr("Чтение списка файлов..."));
+    excludedPaths.clear();
+    int nFiles;
+    auto lst = getAllFiles(setDir, nFiles);
+    if (lst.isEmpty() or nFiles == 0) {
         qDebug () << "";
         return;
     }
 
-    ui->progressBar->setMaximum(lst.size());
+    ui->progressBar->setValue(0);
+    ui->progressBar->setMaximum(nFiles);
     QApplication::processEvents();
 //    scene.clear();
-
-    ui->plotWidget->addGraph(ui->plotWidget->yAxis, ui->plotWidget->xAxis);
-    ui->plotWidget->graph(0)->setPen(QColor(50, 50, 50, 255));
-    ui->plotWidget->graph(0)->setLineStyle(QCPGraph::lsNone);
-    ui->plotWidget->graph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 4));
-
     ui->plotWidget->xAxis->setLabel(coordinates_t::coordinateName(ui->axisX->currentIndex()));
     ui->plotWidget->yAxis->setLabel(coordinates_t::coordinateName(ui->axisY->currentIndex()));
-
-    QVector <double> x, y;
-
-    x.reserve(lst.size());
-    y.reserve(lst.size());
 
     double xmin = 0, xmax = 5, ymin = 0, ymax = 5;
 
@@ -108,41 +157,77 @@ void Plot::refreshPlot() {
     };
 
     double x1, y1;
-    for (const QString& fname : lst) {
-        if (not read_file (fname, x1, y1))
-            continue;
-        xmin = xmax = x1;
-        ymin = ymax = y1;
-        break;
-    }
+    for (auto& cset : lst)
+        for (const QString& fname : cset.fnames) {
+            // read the first file and set starting values for x and y ranges
+            if (not read_file (fname, x1, y1))
+                continue;
+            xmin = xmax = x1;
+            ymin = ymax = y1;
+            goto got_ranges;
+        }
+got_ranges:
 
     int progress = 0;
-    for (QString fname : lst) {
-        ui->progressBar->setValue(progress++);
-        if (progress % 20 == 0)
-            QApplication::processEvents();
-        if (not read_file (fname, x1, y1))
-            continue;
-        if (std::isnan(x1) or std::isnan(y1))
-            // that means that the coordinate is not applicable to the series, just ignore this point
-            continue;
-        x.append (x1);
-        xmin = std::min (xmin, x1);
-        xmax = std::max (xmax, x1);
-        y.append (y1);
-        ymin = std::min (ymin, y1);
-        ymax = std::max (ymax, y1);
+    int graph_no = 0;
+    for (const colouredFiles& files : lst) {
+        const QColor colour = files.colour;
+        const QDir& dir = files.dir;
+        ui->plotWidget->addGraph(ui->plotWidget->yAxis, ui->plotWidget->xAxis);
+        auto graph = ui->plotWidget->graph(graph_no++);
+        graph->setLineStyle(QCPGraph::lsNone);
+        graph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 4));
+        graph->setPen(colour);
+
+        QVector <double> x, y;
+
+        x.reserve(lst.size());
+        y.reserve(lst.size());
+
+        for (const auto& fname : files.fnames) {
+            ui->progressBar->setValue(progress++);
+            if (progress % 20 == 0)
+                QApplication::processEvents();
+            if (not read_file (dir.filePath(fname), x1, y1))
+                continue;
+            if (std::isnan(x1) or std::isnan(y1) or std::isinf(x1) or std::isinf(y1))
+                // that means that the coordinate is not applicable to the series, just ignore this point
+                continue;
+            x.append (x1);
+            xmin = std::min (xmin, x1);
+            xmax = std::max (xmax, x1);
+            y.append (y1);
+            ymin = std::min (ymin, y1);
+            ymax = std::max (ymax, y1);
+        }
+
+        graph->setData(y, x);
     }
 
-    ui->plotWidget->graph(0)->setData(y, x);
     qDebug () << "Range:" << xmin << ".." << xmax << "×"
               << ymin << ".." << ymax;
 
-    xmin *= 0.98;
-    xmax *= 1.02;
+    auto adjust_range = [](auto& rmin, auto& rmax) {
+        if (rmin == rmax) {
+            if (rmin == 0) {
+                rmin = -.03;
+                rmax = +.03;
+            } else {
+                rmin *=  .97;
+                rmax *= 1.03;
+            }
+        } else {
+            auto delta = (rmax - rmin) * .03;
+            rmin -= delta;
+            rmax += delta;
+        }
+    };
 
-    ymin *= 0.98;
-    ymax *= 1.02;
+    adjust_range (xmin, xmax);
+    adjust_range (ymin, ymax);
+
+    qDebug () << "Adjusted range:" << xmin << ".." << xmax << "×"
+              << ymin << ".." << ymax;
 
     ui->plotWidget->xAxis->setRange(xmin, xmax);
     ui->plotWidget->yAxis->setRange(ymin, ymax);
@@ -179,11 +264,11 @@ void Plot::on_savePlot_clicked() {
 
 void Plot::on_saveAll_clicked() {
     const auto x = ui->axisX->currentIndex(), y = ui->axisY->currentIndex();
-    scope_exit restore ([this, x, y]{
+    scope_exit (([this, x, y]{
         ui->axisX->setCurrentIndex(x);
         ui->axisY->setCurrentIndex(y);
         refreshPlot();
-    });
+    }));
 
     QDir target (ui->setPath->text());
     target.mkdir("plots");
@@ -202,7 +287,7 @@ void Plot::on_saveAll_clicked() {
             ui->plotWidget->savePdf(fname);
         }
 
-    system (QString ("pdftk %1 output '%2'")
+    system (ui->pdftk->text()
             .arg(cmdline)
             .arg(target.absoluteFilePath("plots.pdf"))
             .toLocal8Bit());

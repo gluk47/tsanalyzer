@@ -43,6 +43,9 @@
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QLabel" name="label_2">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Программа сжатия данных, используемая для оценки колмогоровской сложности.&lt;/p&gt;&lt;p&gt;Чем лучше сжатие, тем точнее оценка.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Компрессор (LZMA): </string>
        </property>
@@ -50,6 +53,9 @@
      </item>
      <item>
       <widget class="QLineEdit" name="lzmaPath">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Программа сжатия данных, используемая для оценки колмогоровской сложности.&lt;/p&gt;&lt;p&gt;Чем лучше сжатие, тем точнее оценка.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>../lzma</string>
        </property>
@@ -59,6 +65,26 @@
       <widget class="QToolButton" name="browseLzmaPath">
        <property name="text">
         <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Аргументы командной строки для запуска компрессора.&lt;/p&gt;&lt;p&gt;Для lzma аргументы должны быть &lt;span style=&quot; font-weight:600;&quot;&gt;e -so&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;Аргументы должны указывать компрессору сжимать данные и выводить результат в стандартный вывод (stdout).&lt;/p&gt;&lt;p&gt;Команда запуска компрессора выглядит следующим образом:&lt;br/&gt;lzma e -so uncompressed_file_name&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Параметры запуска:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lzmaArgs">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Аргументы командной строки для запуска компрессора.&lt;/p&gt;&lt;p&gt;Для lzma аргументы должны быть &lt;span style=&quot; font-weight:600;&quot;&gt;e -so&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;Аргументы должны указывать компрессору сжимать данные и выводить результат в стандартный вывод (stdout).&lt;/p&gt;&lt;p&gt;Команда запуска компрессора выглядит следующим образом:&lt;br/&gt;lzma e -so uncompressed_file_name&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>e -so</string>
        </property>
       </widget>
      </item>
@@ -75,7 +101,7 @@
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Область значений временного ряда равномерно разбивается на указанное количество полусегментов, а затем каждое его значение заменяется номером полусегмента, в которое это значение попадает; последний полусегмент дополняется справа до сегмента.&lt;/p&gt;&lt;p&gt;Это нужно для расчёта колмогоровской сложности и меры символьного разнообразия.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
-        <string>Количество полусегментов для кодирования ряда:</string>
+        <string>Количество полусегментов:</string>
        </property>
       </widget>
      </item>
@@ -98,11 +124,58 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="go">
-     <property name="text">
-      <string>Рассчитать координаты и корреляции</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QPushButton" name="go">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Рассчитать координаты и корреляции</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QWidget" name="correlationSaveWidget" native="true">
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QToolButton" name="saveCorrelations">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Сохранить матрицу корреляций в файл…</string>
+          </property>
+          <property name="icon">
+           <iconset theme="document-save-as"/>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextBesideIcon</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QLabel" name="status">

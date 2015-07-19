@@ -85,11 +85,46 @@
     </layout>
    </item>
    <item>
-    <widget class="QProgressBar" name="progressBar">
-     <property name="value">
-      <number>24</number>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Команда, которая будет запущена для сборки pdf всех графиков в один файл «plots.pdf» по нажатию кнопки «Сохранить в файл графики всех пар».&lt;/p&gt;&lt;p&gt;«%1» будет заменено на названия всех файлов через пробел; «%2» будет заменено на имя выходного файла.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Команда для склейки pdf:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="pdftk">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Команда, которая будет запущена для сборки pdf всех графиков в один файл «plots.pdf» по нажатию кнопки «Сохранить в файл графики всех пар».&lt;/p&gt;&lt;p&gt;«%1» будет заменено на названия всех файлов через пробел; «%2» будет заменено на имя выходного файла.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>pdftk %1 output '%2'</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="QProgressBar" name="progressBar">
+       <property name="value">
+        <number>24</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="progressMsg">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QCustomPlot" name="plotWidget" native="true">
@@ -150,5 +185,38 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>progressBar</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>progressMsg</receiver>
+   <slot>hide()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>695</x>
+     <y>116</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>766</x>
+     <y>122</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>progressMsg</sender>
+   <signal>windowIconTextChanged(QString)</signal>
+   <receiver>progressBar</receiver>
+   <slot>hide()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>785</x>
+     <y>108</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>703</x>
+     <y>110</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

@@ -18,6 +18,10 @@
 #include <QProcess>
 #include <QTextStream>
 
+#ifdef Q_OS_WIN32
+using std::isnan;
+#endif
+
 AnalyzeWidget::AnalyzeWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::AnalyzeWidget) {
@@ -48,6 +52,7 @@ AnalyzeWidget::AnalyzeWidget(QWidget *parent) :
             this, &AnalyzeWidget::resizeCorrelations);
 
     checkPaths();
+    ui->correlationSaveWidget->hide();
     correlations_label->hide();
 }
 
@@ -67,6 +72,7 @@ void AnalyzeWidget::on_browseSetPath_clicked() {
 void processSeries (const QDir& destDir,
                     const QDir& dir,
                     const QString& fname,
+                    const QString& compressorCmd,
                     unsigned nSegments) {
     QFile coordFile (destDir.absoluteFilePath(fname + ".coords"));
     if (coordFile.exists())
@@ -97,9 +103,9 @@ void processSeries (const QDir& destDir,
     tendencyFile.close();
 
     QProcess arc;
-    arc.start("../lzma e -so \"" + codedfile.fileName() + "\"");
+    arc.start(QString(R"(%1 "%2")").arg(compressorCmd).arg (codedfile.fileName()));
     QProcess t_arc;
-    t_arc.start("../lzma e -so \"" + tendencyFile.fileName() + "\"");
+    t_arc.start(QString(R"(%1 "%2")").arg(compressorCmd).arg (tendencyFile.fileName()));
 
     QTextStream coords (&coordFile);
 
@@ -193,6 +199,7 @@ std::string to_string(std::chrono::duration<T, R> ns) {
 void process_all_series_background(const QDir& dir, const QDir& destDir,
                                    const QStringList& lst, int id, int nthreads,
                                    const volatile std::atomic <bool>* const stop,
+                                   const QString& compressorCmd,
                                    unsigned nSegments) {
     std::cerr << "Thread " << id << " out of " << nthreads << " started\n";
     auto i = lst.constBegin();
@@ -206,7 +213,7 @@ void process_all_series_background(const QDir& dir, const QDir& destDir,
 
     while (not *stop) {
         const auto& fname = *i;
-        processSeries (destDir, dir, fname, nSegments);
+        processSeries (destDir, dir, fname, compressorCmd, nSegments);
 
         for (int next = 0; next < nthreads; ++next) {
             ++i;
@@ -250,10 +257,14 @@ void AnalyzeWidget::processAllSeries() {
     std::vector <std::future <void>> workers;
     workers.reserve(nthreads - 1);
     const unsigned nSegments = ui->nSegments->value();
+    const auto compressorCmd = QString (R"("%1" %2)")
+            .arg(ui->lzmaPath->text())
+            .arg(ui->lzmaArgs->text());
     for (int id = nthreads - 1; id > 0; --id)
         workers.push_back(std::async(std::launch::async,
                                      process_all_series_background, dir, destDir,
                                      lst, id, nthreads, &stop,
+                                     compressorCmd,
                                      nSegments));
 
     // lambda here is a syntax sugar for 'return' below
@@ -276,7 +287,7 @@ void AnalyzeWidget::processAllSeries() {
                     .arg(QString::fromStdString(to_string(left))));
         }
         if (not fname.toLower().endsWith(".coeffts"))
-            processSeries (destDir, dir, fname, nSegments);
+            processSeries (destDir, dir, fname, compressorCmd, nSegments);
 
         ui->progressBar->setValue(++progress);
         if (unsigned (progress) % 2)
@@ -401,6 +412,7 @@ void AnalyzeWidget::FindCorrelations() {
             QApplication::processEvents();
         }
     }
+    ui->correlationSaveWidget->show();
 }
 
 void AnalyzeWidget::status(const QString &message) {
@@ -471,4 +483,28 @@ void AnalyzeWidget::on_lzmaPath_textChanged(const QString &arg1) {
 
 void AnalyzeWidget::on_AnalyzeWidget_destroyed() {
     stop = true;
+}
+
+void AnalyzeWidget::on_saveCorrelations_clicked() {
+    auto fname = QFileDialog::getSaveFileName(this,
+                                              tr("Куда сохранить таблицу?"),
+                                              ui->setPath->text(),
+                                              tr("csv (*.csv)"));
+
+    if (fname.isNull())
+        return;
+
+    QFile file (fname);
+    file.open(QIODevice::WriteOnly | QIODevice::Truncate);
+    QTextStream output (&file);
+
+    for (unsigned i = 0; i < coordinates_t::nValues; ++i)
+        output << QString::fromUtf8(coordinates_t::coordinateName(i)) << ",";
+    output << "\n";
+
+    for (unsigned i = 0; i < coordinates_t::nValues; ++i) {
+        for (unsigned j = 0; j < coordinates_t::nValues; ++j)
+            output << ui->correlations->item(i, j)->text().toDouble() << ",";
+        output << "\n";
+    }
 }

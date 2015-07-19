@@ -40,12 +40,14 @@ void setErrorBackground (QWidget* w, bool is_error,
                          const QString& noerrorToolTip,
                          const QString& errorToolTip = QObject::tr("Файл не найден"));
 
-struct scope_exit {
-    scope_exit (std::function<void ()>&& f) : f (move(f)) {}
-    ~scope_exit () { f(); }
+struct scope_exit_t {
+    scope_exit_t (std::function<void ()>&& f) : f (move(f)) {}
+    ~scope_exit_t () { f(); }
 private:
     std::function <void ()> f;
 };
+
+#define scope_exit(x) scope_exit_t scope_exit_object_ ## __LINE__ (x)
 
 QString plural (const char* base,
                 const char* one,

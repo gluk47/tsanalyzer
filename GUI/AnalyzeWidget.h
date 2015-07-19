@@ -32,6 +32,8 @@ private slots:
 
     void on_AnalyzeWidget_destroyed();
 
+    void on_saveCorrelations_clicked();
+
 private:
     /// Get the directory with the result of the program
     QString destPath ();

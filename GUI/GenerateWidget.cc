@@ -100,8 +100,10 @@ GenerateWidget::GenerateWidget(QWidget *parent) :
     ADD(b); // 2
     ADD(c); // 3
     ADD(γ); // 4
+    w->setLimits(-20, 20);
     ADD(d); // 5
     ADD(δ); // 6
+    w->setLimits(1e-5, 32000);
     w->setMin(1e-2);
     w->setMax(3);
 
@@ -110,11 +112,13 @@ GenerateWidget::GenerateWidget(QWidget *parent) :
     w->setMin(100);
     w->setMax(101);
     w->setStep(2);
+    w->setLimits(100, 1000);
 
     ADD(r); // 9
     w->setMin(.91);
     w->setMax(.96);
     w->setStep(.05);
+    w->setLimits(0, 1);
 
 #undef ADD
 
@@ -142,7 +146,7 @@ void GenerateWidget::generate() {
     ui->progressBar->setValue(0);
     ui->progressBar->show();
 
-    scope_exit restore_ui ([this]{
+    scope_exit ([this]{
         ui->progressBar->hide();
     });
 
@@ -206,7 +210,20 @@ void GenerateWidget::countSetSize() {
     ui->labelCount->setText(spaceNumber(setSize));
     ui->labelCount->show();
     ui->labelSetSize->show();
-    ui->labelSeries->setText(plural("ряд", "", "а", "ов", setSize));
+    auto label = plural("ряд", "", "а", "ов", setSize);
+    QString sizeLabel;
+
+    // 13.5 kB per 1500 values in ont time series
+    auto kb = setSize * 13.5 / 1500. * ui->nValues->value();
+    auto mb = kb / 1024;
+    auto gb = mb / 1024;
+    if (gb > 1)
+        sizeLabel = QString::number(gb, 'g', 2) + " ГиБ";
+    else if (mb > 1)
+        sizeLabel = QString::number(mb, 'g', 2) + " МиБ";
+    else
+        sizeLabel = QString::number(kb, 'g', 2) + " КиБ";
+    ui->labelSeries->setText((label + " (%1)").arg (sizeLabel));
     ui->labelSeries->show();
     ui->countSetSize->setEnabled(true);
 }
