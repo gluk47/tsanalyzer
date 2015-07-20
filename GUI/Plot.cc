@@ -142,15 +142,22 @@ void Plot::refreshPlot() {
     double xmin = 0, xmax = 5, ymin = 0, ymax = 5;
 
     auto read_file = [setDir, this](const QString& fname, double& x, double& y){
-        QFile file (setDir.filePath(fname));
+        QFile file (fname);
         file.open(QIODevice::ReadOnly);
-        if (file.size() < 2)
+        if (file.size() < 2) {
+            qDebug () << "Skipping empty file" << fname;
             // some invalid empty file
             return false;
+        }
         QTextStream coordinates (&file);
         coordinates_t point;
-        for (size_t j = 0; j < coordinates_t::nValues; ++j)
+        for (size_t j = 0; j < coordinates_t::nValues; ++j) {
             coordinates >> point.values[j];
+            if (coordinates.status() != coordinates.Ok) {
+                qDebug () << "Error reading file" << fname << "(coordinate" << j << ")";
+                return false;
+            }
+        }
         x = point.values[ui->axisX->currentIndex()];
         y = point.values[ui->axisY->currentIndex()];
         return std::isfinite(x) and std::isfinite(y);
@@ -160,8 +167,10 @@ void Plot::refreshPlot() {
     for (auto& cset : lst)
         for (const QString& fname : cset.fnames) {
             // read the first file and set starting values for x and y ranges
-            if (not read_file (fname, x1, y1))
+            qDebug () << "Reading range from" << fname << "...";
+            if (not read_file (cset.dir.filePath(fname), x1, y1))
                 continue;
+            qDebug () << "...got it: " << x1 << "," << y1;
             xmin = xmax = x1;
             ymin = ymax = y1;
             goto got_ranges;
