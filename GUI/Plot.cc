@@ -61,24 +61,18 @@ static QSet <QString> excludedPaths;
 QList <Plot::colouredFiles> Plot::getAllFiles (const QDir& dir, int& nFiles) {
     excludedPaths.insert(dir.canonicalPath());
 
-    qDebug () << "+++" << dir.canonicalPath();
-
     const QColor colour = [this, dir]{
-        qDebug () << "Looking for file" << colourFname;
         QFile colourFile (dir.filePath(colourFname));
         if (not colourFile.exists()) {
-            qDebug () << "... not found";
             return defaultColor;
         }
         colourFile.open(QIODevice::ReadOnly);
         if (not colourFile.isOpen()) {
-            qDebug () << "... failed to open";
             return defaultColor;
         }
         int r = -1, g = -1, b = -1;
         QTextStream filestream (&colourFile);
         filestream >> r >> g >> b;
-        qDebug () << "... read colors: " << r << g << b;
         if (r == -1 or g == -1 or b == -1)
             return defaultColor;
         return QColor::fromRgb(r, g, b);
@@ -92,12 +86,9 @@ QList <Plot::colouredFiles> Plot::getAllFiles (const QDir& dir, int& nFiles) {
         ans.append(colouredFiles {lst, dir, colour});
 
     lst = dir.entryList(QDir::Readable | QDir::Dirs | QDir::NoDotAndDotDot);
-    qDebug () << "Examining subfolders of" << dir.absolutePath() << "("
-              << lst.size() << "entries)...";
     for (const auto& d : lst) {
         QDir nextDir (dir.filePath(d));
         if (excludedPaths.contains(nextDir.canonicalPath())) {
-            qDebug () << "Skipping" << nextDir.absolutePath() << "(already analyzed)";
             continue;
         }
         excludedPaths.insert(nextDir.canonicalPath());
@@ -105,9 +96,6 @@ QList <Plot::colouredFiles> Plot::getAllFiles (const QDir& dir, int& nFiles) {
         ans += getAllFiles(nextDir, nMoreFiles);
         nFiles += nMoreFiles;
     }
-
-    qDebug () << "---" << dir.absolutePath();
-
     return ans;
 }
 
@@ -145,7 +133,6 @@ void Plot::refreshPlot() {
         QFile file (fname);
         file.open(QIODevice::ReadOnly);
         if (file.size() < 2) {
-            qDebug () << "Skipping empty file" << fname;
             // some invalid empty file
             return false;
         }
@@ -154,7 +141,6 @@ void Plot::refreshPlot() {
         for (size_t j = 0; j < coordinates_t::nValues; ++j) {
             coordinates >> point.values[j];
             if (coordinates.status() != coordinates.Ok) {
-                qDebug () << "Error reading file" << fname << "(coordinate" << j << ")";
                 return false;
             }
         }
@@ -167,10 +153,8 @@ void Plot::refreshPlot() {
     for (auto& cset : lst)
         for (const QString& fname : cset.fnames) {
             // read the first file and set starting values for x and y ranges
-            qDebug () << "Reading range from" << fname << "...";
             if (not read_file (cset.dir.filePath(fname), x1, y1))
                 continue;
-            qDebug () << "...got it: " << x1 << "," << y1;
             xmin = xmax = x1;
             ymin = ymax = y1;
             goto got_ranges;
@@ -213,9 +197,6 @@ got_ranges:
         graph->setData(y, x);
     }
 
-    qDebug () << "Range:" << xmin << ".." << xmax << "×"
-              << ymin << ".." << ymax;
-
     auto adjust_range = [](auto& rmin, auto& rmax) {
         if (rmin == rmax) {
             if (rmin == 0) {
@@ -234,9 +215,6 @@ got_ranges:
 
     adjust_range (xmin, xmax);
     adjust_range (ymin, ymax);
-
-    qDebug () << "Adjusted range:" << xmin << ".." << xmax << "×"
-              << ymin << ".." << ymax;
 
     ui->plotWidget->xAxis->setRange(xmin, xmax);
     ui->plotWidget->yAxis->setRange(ymin, ymax);
